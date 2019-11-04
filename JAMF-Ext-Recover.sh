@@ -27,6 +27,21 @@
 #
 ###############################################################################################################################################
 #
+#   DEFINE VARIABLES & READ IN PARAMETERS
+#
+###############################################################################################################################################
+#
+# Determine what you wish to report
+# MATCH = If Present, does the Recovery Partition Match the OS Version
+# VER = If Present, what is the Recovery Partition Version
+MATCH_VER=VER
+#
+###############################################################################################################################################
+# 
+# Begin Processing
+#
+###############################################################################################################################################
+#
 OS_ver=$(sw_vers | grep ProductVersion | cut -c 17-) # Get the OS we're on
 MajorVer=$(/bin/echo "$OS_ver" | awk -F. '{ print $1; }') # Split Out Major Version
 MinorVer=$(/bin/echo "$OS_ver" | awk -F. '{ print $2; }') # Split Out Minor Version
@@ -79,7 +94,20 @@ if [ "$recoveryHDPresent" != "" ] # Check and Output presence of Recovery Partit
 				fi
 			done
 		#
-		/bin/echo "<result>$BestRecVer</result>"
+		#Unmount RecoveryHD
+		diskutil unmount "$recoveryPartition"
+		#
+        if [ $MATCH_VER == "MATCH" ]
+			then
+				if [[ "${BestRecVer}" == "${OS_ver}" ]]      
+					then
+						/bin/echo "<result>MATCH</result>" # Comm
+					else
+						/bin/echo "<result>NO MATCH</result>" # Comm
+				fi
+			else
+				/bin/echo "<result>$BestRecVer</result>"
+		fi
 	else
 		/bin/echo "<result>Not Present</result>"
 fi    
