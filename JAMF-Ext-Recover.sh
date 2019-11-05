@@ -12,7 +12,7 @@
 #
 # HISTORY
 #
-#   Version: 1.3 - 04/11/2019
+#   Version: 1.4 - 05/11/2019
 #
 #   - 14/10/2018 - V1.0 - Created by Headbolt
 #
@@ -24,6 +24,10 @@
 #   - 04/11/2019 - V1.3 - Updated by Headbolt
 #							Updated Again to Cycle through all instances of Recovery Partitions
 #							and report the Highest Version Number as what is available
+#   - 05/11/2019 - V1.4 - Updated by Headbolt
+#							Updated Again to remove Version based Disk Number and instead allow setting
+#							a variable to specify a number of disks to check and cycle through them all.
+#							this was to accomodate varying configurations of Hardware etc
 #
 ###############################################################################################################################################
 #
@@ -35,24 +39,28 @@
 # MATCH = If Present, does the Recovery Partition Match the OS Version
 # VER = If Present, what is the Recovery Partition Version
 MATCH_VER=VER
+Disks_To_Check=5 # Set Number Of Disks to be Checked. eg. 5 + Disks 1 to 5
+#
+OS_ver=$(sw_vers | grep ProductVersion | cut -c 17-) # Get the OS we're on
+OS_MajorVer=$(/bin/echo "$OS_ver" | awk -F. '{ print $1; }') # Split Out Major Version
+OS_MinorVer=$(/bin/echo "$OS_ver" | awk -F. '{ print $2; }') # Split Out Minor Version
+OS_PatchVer=$(/bin/echo "$OS_ver" | awk -F. '{ print $3; }') # Split Out Patch Version
+#
+Disk_Array=$(seq -s ' ' 1 $Disks_To_Check) 
 #
 ###############################################################################################################################################
 # 
-# Begin Processing
+# SCRIPT CONTENTS - DO NOT MODIFY BELOW THIS LINE
 #
 ###############################################################################################################################################
 #
-OS_ver=$(sw_vers | grep ProductVersion | cut -c 17-) # Get the OS we're on
-MajorVer=$(/bin/echo "$OS_ver" | awk -F. '{ print $1; }') # Split Out Major Version
-MinorVer=$(/bin/echo "$OS_ver" | awk -F. '{ print $2; }') # Split Out Minor Version
-PatchVer=$(/bin/echo "$OS_ver" | awk -F. '{ print $3; }') # Split Out Patch Version
+# Defining Functions
 #
-if [[ "${MinorVer}" -le 12 ]] # Check Minor Version is Sierra or Lower
-	then
-		disk="disk0" # If Sierra or Lower we need to look at Disk 0
-	else
-		disk="disk1" # If High Sierra or Higher we need to look at Disk 1
-fi
+###############################################################################################################################################
+#
+# Partition Check Function
+#
+RecoveryPartCheck(){
 #
 # Check for Relevant Recovery Partition
 recoveryHDPresent=$(/usr/sbin/diskutil list | grep "Recovery" | grep $disk) 
@@ -95,19 +103,87 @@ if [ "$recoveryHDPresent" != "" ] # Check and Output presence of Recovery Partit
 			done
 		#
 		#Unmount RecoveryHD
-		diskutil unmount "$recoveryPartition"
+		diskutil unmount "$recoveryPartition" >/dev/null
 		#
         if [ $MATCH_VER == "MATCH" ]
 			then
 				if [[ "${BestRecVer}" == "${OS_ver}" ]]      
 					then
-						/bin/echo "<result>MATCH</result>" # Comm
+						Result="MATCH"
 					else
-						/bin/echo "<result>NO MATCH</result>" # Comm
+						Result="NO MATCH"
 				fi
 			else
-				/bin/echo "<result>$BestRecVer</result>"
+				Result=$BestRecVer
 		fi
 	else
-		/bin/echo "<result>Not Present</result>"
-fi    
+		Result="Not Present"
+fi
+#
+}
+#
+###############################################################################################################################################
+#
+# End Of Function Definition
+#
+###############################################################################################################################################
+# 
+# Begin Processing
+#
+###############################################################################################################################################
+#
+for Count in $Disk_Array
+	do
+		disk=disk$Count
+        RecoveryPartCheck
+		BestRecFinalVer="0"
+		#
+		if [[ "${BestRecFinalVer}" == "0" ]]
+			then
+				BestRecFinalVer=$BestRecVer
+			else
+				BestRecFinalMajorVer=$(/bin/echo "$BestRecFinalVer" | awk -F. '{ print $1; }') # Split Out Major Version
+				BestRecFinalMinorVer=$(/bin/echo "$BestRecFinalVer" | awk -F. '{ print $2; }') # Split Out Minor Version
+				BestRecFinalPatchVer=$(/bin/echo "$BestRecFinalVer" | awk -F. '{ print $3; }') # Split Out Patch Version
+				#
+				if [[ "${BestRecFinalMajorVer}" -le "${BestRecMajorVer}" ]]
+					then
+						if [[ "${BestRecFinalMinorVer}" -le "${BestRecMinorVer}" ]]
+							then	
+								if [[ "${BestRecFinalPatchVer}" -le "${BestRecPatchVer}" ]]
+									then
+										BestRecFinalVer=$BestRecVer
+								fi
+						fi
+				fi
+		fi
+		#
+		if [ $MATCH_VER == "MATCH" ]
+			then
+				if [ "$Result" == "NO MATCH" ]
+					then
+						if [ "$Final_Result" == "MATCH" ]
+							then
+								Final_Result=$Final_Result
+							else
+								Final_Result=$Result
+						fi
+					else
+						if [ "$Final_Result" == "MATCH" ]
+							then
+								Final_Result=$Final_Result
+							else
+								Final_Result=$Result
+						fi
+				fi
+			else
+				if [[ "${BestRecFinalVer}" != "0" ]]
+					then
+						Final_Result=$BestRecFinalVer
+					else
+						Final_Result="Not Present"
+				fi    
+		fi
+done
+#
+/bin/echo "<result>$Final_Result</result>"
