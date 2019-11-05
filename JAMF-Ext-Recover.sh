@@ -39,7 +39,7 @@
 # MATCH = If Present, does the Recovery Partition Match the OS Version
 # VER = If Present, what is the Recovery Partition Version
 MATCH_VER=VER
-Disks_To_Check=5 # Set Number Of Disks to be Checked. eg. 5 + Disks 1 to 5
+Disks_To_Check=5 # Set Number Of Disks to be Checked. eg. 5 + Disks 0 to 5
 #
 OS_ver=$(sw_vers | grep ProductVersion | cut -c 17-) # Get the OS we're on
 OS_MajorVer=$(/bin/echo "$OS_ver" | awk -F. '{ print $1; }') # Split Out Major Version
@@ -76,7 +76,7 @@ if [ "$recoveryHDPresent" != "" ] # Check and Output presence of Recovery Partit
 		for RecPath in $RecoveryVolumeFolderList
 			do
 				# Grab the Version from this instance of Recovery
-				RecVer=$(/usr/bin/defaults read /Volumes/"$RecoveryVolumeMountPoint"/$RecPath/SystemVersion.plist ProductVersion)
+				RecVer=$(/usr/bin/defaults read /Volumes/"$RecoveryVolumeMountPoint"/$RecPath/SystemVersion.plist ProductVersion 2>/dev/null)
 				RecMajorVer=$(/bin/echo "$RecVer" | awk -F. '{ print $1; }') # Split Out Major Version
 				RecMinorVer=$(/bin/echo "$RecVer" | awk -F. '{ print $2; }') # Split Out Minor Version
 				RecPatchVer=$(/bin/echo "$RecVer" | awk -F. '{ print $3; }') # Split Out Patch Version
