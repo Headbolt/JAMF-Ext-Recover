@@ -46,7 +46,7 @@ OS_MajorVer=$(/bin/echo "$OS_ver" | awk -F. '{ print $1; }') # Split Out Major V
 OS_MinorVer=$(/bin/echo "$OS_ver" | awk -F. '{ print $2; }') # Split Out Minor Version
 OS_PatchVer=$(/bin/echo "$OS_ver" | awk -F. '{ print $3; }') # Split Out Patch Version
 #
-Disk_Array=$(seq -s ' ' 1 $Disks_To_Check) 
+Disk_Array=$(seq -s ' ' 0 $Disks_To_Check) 
 #
 ###############################################################################################################################################
 # 
